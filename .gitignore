@@ -1,0 +1,44 @@
+###############################################################################
+# Terraform
+###############################################################################
+
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform lock files
+**/.terraform.lock.hcl
+
+# .tfstate files
+**/*.tfstate
+**/*.tfstate.*
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+
+# Skip some files in main module
+main/.terraform.lock.hcl
+main/.tflint.hcl
+
+
+###############################################################################
+# TFLint
+###############################################################################
+
+# Local tflint directories
+**/.tflint/*
+
+# Local tflint configuration
+# We use the one we get from https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_linux.sh
+**/.tflint.hcl
+
+
+###############################################################################
+# Other
+###############################################################################
+
+# VScode files
+**/.vscode/*
