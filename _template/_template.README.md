@@ -47,10 +47,34 @@ For commands to issue locally in the `envs/_terraform-state` directory see [envs
 
 [BOOTSTRAP_VALUE_README_SEC_STATE_CMDS]
 
-### Locally cached files
+### More about linting
+
+#### Powershell
+
+You can also lint with powershell.
+
+```powershell
+# Create a short hand invocation
+$lint = { Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_windows.ps1')) }
+
+# Call the linting script
+.$lint
+```
+
+#### Remove locally cached tflint files
 
 Using the TFLint script(s) above installs som files locally, if you at some point want to remove the local installation of TFLint this can be achieved calling the same script(s) with an argument :
+
 ```bash
+# bash
 lint --uninstall
 ```
+
+```powershell
+# powershell
+Invoke-Command `
+  -ScriptBlock ([scriptblock]::Create(((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_windows.ps1')) -join "`n")) `
+  -ArgumentList $false,$true,$false # Force = false, Remove = true, ExitWithCode = false
+```
+
 **Note**: This must be repeated for each directory from which linting was performed.
