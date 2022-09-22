@@ -30,10 +30,6 @@ modules/**/.terraform.lock.hcl
 # Local tflint directories
 **/.tflint/*
 
-# Local tflint configuration
-# We use the one we get from https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_linux.sh
-**/.tflint.hcl
-
 # In main module
 main/.tflint.hcl
 
