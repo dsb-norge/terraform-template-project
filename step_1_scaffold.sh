@@ -89,6 +89,7 @@ _yes-or-no "Does this 🔼 look correct?" || exit 0
 
 echo "scaffold.sh: templating project ..."
 mv -f ${TEMPLATE_DIR}/* "${ROOT_DIR}"
+mv -f "${TEMPLATE_DIR}/.gitignore" "${ROOT_DIR}/.gitignore"
 rm -r "${TEMPLATE_DIR}"
 declare -A ENV_TO_VARS_FILE_MAP
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
