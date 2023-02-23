@@ -8,5 +8,3 @@ provider "azurerm" {
 provider "azuread" {
   # Configuration options
 }
-# Supports the use of randomness within Terraform configurations.
-provider "random" {}
