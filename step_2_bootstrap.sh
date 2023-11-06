@@ -343,5 +343,6 @@ done
 echo -e "bootstrap.sh: bootstrapping complete.\n"
 echo "bootstrap.sh: next steps:"
 echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
-echo "bootstrap.sh:   2️⃣  Update project README.md in the root  directory with relevant information."
-echo -e "bootstrap.sh:   3️⃣  Start developing your terraform project 😁\n"
+echo "bootstrap.sh:   2️⃣  Update project README.md in the root directory with relevant information."
+echo "bootstrap.sh:   3️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
+echo -e "bootstrap.sh:   4️⃣  Start developing your terraform project 😁\n"

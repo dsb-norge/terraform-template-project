@@ -1,0 +1,33 @@
+name: "Validate"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch: # allows manual build
+
+jobs:
+  tf:
+    uses: dsb-norge/github-actions-terraform/.github/workflows/terraform-ci-cd-default.yml@v0
+    secrets: inherit # pass all secrets, ok since we trust our own workflow
+    permissions: write-all # allow all, ok since we trust our own workflow
+    with:
+      terraform-version: "latest" # full version string ex. 'v0.48.0', semver og 'latest'
+      tflint-version: "latest" # full version string ex. 'v0.48.0' or 'latest', does not support wildcards/patterns
+      # all init commands should be performed without backend
+      extra-envs-yml: |
+        TF_CLI_ARGS_init: "-backend=false"
+      # required by tflint
+      terraform-init-additional-dirs-yml: |
+        - "./main"
+      # only validate + lint, project must be applied manually
+      goals-yml: |
+        - init
+        - format
+        - validate
+        - lint
+      environments-yml: |

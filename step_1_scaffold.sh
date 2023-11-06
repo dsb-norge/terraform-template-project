@@ -9,6 +9,7 @@ TF_STATE_ENV_DIR="${ENVS_DIR}/_terraform-state"
 ENV_TEMPLATE_DIR="${ENVS_DIR}/_template"
 ENV_VARS_TEMPLATE_FILE="${TF_STATE_ENV_DIR}/_template.tfvars"
 BOOTSTRAP_CONFIG_FILE="${ROOT_DIR}/bootstrap.json"
+GH_WORKFLOW_FILE="${ROOT_DIR}/.github/workflows/validate.yml"
 
 # Helper functions
 function _jq { echo ${ENV_OBJ} | base64 --decode | jq -r ${*}; }
@@ -88,16 +89,26 @@ done
 _yes-or-no "Does this 🔼 look correct?" || exit 0
 
 echo "scaffold.sh: templating project ..."
+rm -rf "${ROOT_DIR}/.github" || : # allow not to exist
 mv -f ${TEMPLATE_DIR}/* "${ROOT_DIR}"
 mv -f "${TEMPLATE_DIR}/.gitignore" "${ROOT_DIR}/.gitignore"
+mv -f "${ROOT_DIR}/dotGithub" "${ROOT_DIR}/.github"
 rm -r "${TEMPLATE_DIR}"
 declare -A ENV_TO_VARS_FILE_MAP
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   echo "scaffold.sh: templating '${ENV}' environment ..."
+
+  # create env dir from template
   mkdir -p "${ENVS_DIR}/${ENV}"
   cp -r ${ENV_TEMPLATE_DIR}/* "${ENVS_DIR}/${ENV}"
   ENV_TO_VARS_FILE_MAP[${ENV}]="${TF_STATE_ENV_DIR}/env.${ENV}.tfvars"
   sed "s/\[SCAFFOLD_VALUE_ENVIRONMENT_NAME\]/$ENV/g" ${ENV_VARS_TEMPLATE_FILE} >"${ENV_TO_VARS_FILE_MAP[${ENV}]}"
+
+  # add env to GitHub validate workflow
+  cat <<EOF >> "${GH_WORKFLOW_FILE}"
+        - environment: "${ENV}"
+          url: "https://github.com/dsb-norge/:TODO:/blob/main/envs/${ENV}/main.tf"
+EOF
 done
 
 echo "scaffold.sh: writing $(_rel-path "${BOOTSTRAP_CONFIG_FILE}") ..."
