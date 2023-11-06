@@ -16,10 +16,14 @@
 **/*_override.tf
 **/*_override.tf.json
 
-# In main module
+# Ignore CLI configuration files
+**/.terraformrc
+**/terraform.rc
+
+# Ignore lock file in main module
 main/.terraform.lock.hcl
 
-# In modules directory
+# Ignore lock files in modules directory
 modules/**/.terraform.lock.hcl
 
 
@@ -27,19 +31,27 @@ modules/**/.terraform.lock.hcl
 # TFLint
 ###############################################################################
 
+# Config files
+**/.tflint.hcl
+
+# Except config files for envs
+!envs/**/.tflint.hcl
+
 # Local tflint directories
 **/.tflint/*
-
-# In main module
-main/.tflint.hcl
-
-# In modules directory
-modules/**/.tflint.hcl
 
 
 ###############################################################################
 # Other
 ###############################################################################
 
+
 # VScode files
 **/.vscode/*
+
+# Idea and key file
+*.idea/
+*.key
+
+# Crash log files
+crash.log
