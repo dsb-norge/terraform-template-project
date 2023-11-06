@@ -3,23 +3,24 @@
 Template project for terraform featuring scripted scaffolding and bootstrapping of remote state.
 
 This project simplifies multiple processes:
+
 1. Create scaffolding for a new terraform project, including config for multiple environments.
 2. Bootstrap terraform remote state in Azure for all environments.
    - The remote state is handled in a separate "environment" called "_terraform-state", see `envs/_terraform-state/README.md` after scaffolding for more details.
 
-
 ## Prerequisites
 
 The following tooling must be installed in order for scaffolding and bootstrapping to succeed:
+
 - jq - command-line JSON processor
   - `sudo apt-get update && sudo apt-get install -y jq`
 - Azure CLI - https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 - Terraform - https://www.terraform.io/downloads
 
-
 ## How to
 
 This is how you scaffold and bootstrap this project into an empty terraform project:
+
 1. Log in to yor Azure tenant using `az login`
 2. From the root of the project run `step_1_scaffold.sh`
    - Supply information about environments and Azure subscriptions as requested.
@@ -40,7 +41,7 @@ This is how you scaffold and bootstrap this project into an empty terraform proj
 
 Example of resulting project structure (scaffolded for environments `env1` and `env2`):
 
-```
+```text
 .
 ├── README.md
 ├── envs

@@ -42,7 +42,7 @@ function _record-commands-for-readme {
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "init"]="terraform -chdir='$(_rel-path "${ENV_DIR}")' init -reconfigure -upgrade"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "fmt"]="terraform -chdir='$(_rel-path "${ENV_DIR}")' fmt -check -recursive"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "validate"]="terraform -chdir='$(_rel-path "${ENV_DIR}")' validate"
-  TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "lint2"]="pushd '$(_rel-path "${ENV_DIR}")' >/dev/null && lint -f && popd >/dev/null || popd >/dev/null"
+  TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "lint2"]="pushd '$(_rel-path "${ENV_DIR}")' >/dev/null && lint && popd >/dev/null || popd >/dev/null"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "plan"]="terraform -chdir='$(_rel-path "${ENV_DIR}")' plan"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "apply"]="terraform -chdir='$(_rel-path "${ENV_DIR}")' apply"
 
@@ -50,7 +50,7 @@ function _record-commands-for-readme {
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-init"]="terraform -chdir='$(_rel-path "${TF_STATE_ENV_DIR}")' init -reconfigure -upgrade -backend-config='${ENV_TF_STATE_BACKEND_VARS_FILE_NAME}'"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-fmt"]="terraform -chdir='$(_rel-path "${TF_STATE_ENV_DIR}")' fmt -check -recursive"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-validate"]="terraform -chdir='$(_rel-path "${TF_STATE_ENV_DIR}")' validate"
-  TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-lint2"]="pushd '$(_rel-path "${TF_STATE_ENV_DIR}")' >/dev/null && lint -f && popd >/dev/null || popd >/dev/null"
+  TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-lint2"]="pushd '$(_rel-path "${TF_STATE_ENV_DIR}")' >/dev/null && lint && popd >/dev/null || popd >/dev/null"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-plan"]="terraform -chdir='$(_rel-path "${TF_STATE_ENV_DIR}")' plan -var-file='${ENV_TFVARS_FILE_NAME}'"
   TF_COMMANDS_FROM_ROOT_DIR[${ENV_NAME}, "state-apply"]="terraform -chdir='$(_rel-path "${TF_STATE_ENV_DIR}")' apply -var-file='${ENV_TFVARS_FILE_NAME}'"
 
@@ -58,7 +58,7 @@ function _record-commands-for-readme {
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "init"]="terraform init -reconfigure -upgrade"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "fmt"]="terraform fmt -check -recursive"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "validate"]="terraform validate"
-  TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "lint2"]="lint -f"
+  TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "lint2"]="lint"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "plan"]="terraform plan"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "apply"]="terraform apply"
 
@@ -66,7 +66,7 @@ function _record-commands-for-readme {
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-init"]="terraform init -reconfigure -upgrade -backend-config='${ENV_TF_STATE_BACKEND_VARS_FILE_NAME}'"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-fmt"]="terraform fmt -check -recursive"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-validate"]="terraform validate"
-  TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-lint2"]="lint -f"
+  TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-lint2"]="lint"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-plan"]="terraform plan -var-file='${ENV_TFVARS_FILE_NAME}'"
   TF_COMMANDS_FROM_ENV_DIR[${ENV_NAME}, "state-apply"]="terraform apply -var-file='${ENV_TFVARS_FILE_NAME}'"
 }
