@@ -38,3 +38,6 @@
 
 # VScode files
 **/.vscode/*
+
+# MacOs specific files
+**/.DS_Store
