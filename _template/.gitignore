@@ -55,3 +55,6 @@ modules/**/.terraform.lock.hcl
 
 # Crash log files
 crash.log
+
+# MacOS specific files
+**/.DS_Store
