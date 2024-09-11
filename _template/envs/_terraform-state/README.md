@@ -1,3 +1,4 @@
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate -->
 # `./envs/_terraform-state` directory
 
 This directory holds code for creating and managing remote state resources for terraform in Azure.
