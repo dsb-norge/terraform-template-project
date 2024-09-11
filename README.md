@@ -1,3 +1,4 @@
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate mktemp -->
 # terraform-template-project
 
 Template project for terraform featuring scripted scaffolding and bootstrapping of remote state.
@@ -7,6 +8,14 @@ This project simplifies multiple processes:
 1. Create scaffolding for a new terraform project, including config for multiple environments.
 2. Bootstrap terraform remote state in Azure for all environments.
    - The remote state is handled in a separate "environment" called "_terraform-state", see `envs/_terraform-state/README.md` after scaffolding for more details.
+
+<!-- omit in toc -->
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [How to](#how-to)
+- [Resulting project structure](#resulting-project-structure)
+- [Maintainer documentation](#maintainer-documentation)
 
 ## Prerequisites
 
