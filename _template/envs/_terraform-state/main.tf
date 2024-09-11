@@ -2,10 +2,9 @@ provider "azurerm" {
   features {}
 }
 module "terraform_state_container" {
-  source = "git@github.com:dsb-norge/tf-mod-azure-terraform-state-container.git?ref=v0"
+  source = "git@github.com:dsb-norge/tf-mod-azure-terraform-state-container.git?ref=v1"
 
   subscription_number              = var.subscription_number
-  resource_group_number            = var.resource_group_number
   application_name                 = var.application_name
   application_name_short           = var.application_name_short
   application_friendly_description = var.application_friendly_description
