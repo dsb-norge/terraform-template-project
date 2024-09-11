@@ -71,3 +71,38 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 └── modules
     └── README.md
 ```
+
+## Maintainer documentation
+
+Some of the scripts supports a "test mode". Here is how to dry run the project:
+
+```bash
+#!/usr/bin/env bash
+
+# create a temporary directory and store its path in a variable
+temp_dir=$(mktemp -d)
+
+# copy the contents of the current directory to the temporary directory
+cp -r . $temp_dir
+
+# change to the temporary directory
+pushd $temp_dir
+
+# run step 1
+$(pwd)/step_1_scaffold.sh debug
+
+# read json
+cat bootstrap.json | jq
+
+# run step 2
+$(pwd)/step_2_bootstrap.sh debug
+
+# open temp project in vscode
+code $temp_dir
+
+# change back to the original directory
+popd
+
+# remove the temporary directory
+rm -rf $temp_dir
+```
