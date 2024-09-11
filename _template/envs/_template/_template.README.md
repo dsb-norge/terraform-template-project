@@ -1,3 +1,4 @@
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate -->
 # The [BOOTSTRAP_VALUE_ENV_NAME] environment
 
 This directory holds code for creating and managing resources in the [BOOTSTRAP_VALUE_ENV_NAME] environment.

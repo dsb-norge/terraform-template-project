@@ -1,3 +1,4 @@
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate -->
 # TODO set title for the project README here
 
 TODO Add relevant project information here.
@@ -35,8 +36,11 @@ The following tooling is required:
 
 Below are example command invocations for working with this project.
 
-[BOOTSTRAP_VALUE_README_SEC_ENV_CMDS]
+### Project resources
 
+The following are example command invocations for managing resources for this project.
+
+[BOOTSTRAP_VALUE_README_SEC_ENV_CMDS]
 ### Terraform state resources
 
 The following are example command invocations for managing terraform backend state resources for this project.
@@ -44,7 +48,6 @@ The following are example command invocations for managing terraform backend sta
 For commands to issue locally in the `envs/_terraform-state` directory see [envs/_terraform-state/README.md](envs/_terraform-state/README.md).
 
 [BOOTSTRAP_VALUE_README_SEC_STATE_CMDS]
-
 ### More about linting
 
 #### Powershell

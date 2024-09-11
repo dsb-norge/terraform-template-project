@@ -11,6 +11,12 @@ ENV_VARS_TEMPLATE_FILE="${TF_STATE_ENV_DIR}/_template.tfvars"
 BOOTSTRAP_CONFIG_FILE="${ROOT_DIR}/bootstrap.json"
 GH_WORKFLOW_FILE="${ROOT_DIR}/.github/workflows/validate.yml"
 
+# set TEST_MODE to 1 if first input arguments is "debug"
+TEST_MODE=0
+if [ "${1:-}" == "debug" ]; then
+  TEST_MODE=1
+fi
+
 # Helper functions
 function _jq { echo ${ENV_OBJ} | base64 --decode | jq -r ${*}; }
 function _set-val { OUT_OBJ="$(echo "${OUT_OBJ}" | jq --arg name "${1}" --arg value "${2}" '.[$name] = $value')"; }
@@ -64,23 +70,36 @@ if [ "${SHOULD_EXIT}" -ne 0 ]; then
 fi
 
 echo "scaffold.sh: determine environments ..."
-read -p "Enter your environment names separated by spaces, default [dev test prod]: " INPUT_ENVS
+
+if [ ! "${TEST_MODE}" == "1" ]; then
+  read -p "Enter your environment names separated by spaces, default [dev test prod]: " INPUT_ENVS
+else
+  echo "scaffold.sh: TEST_MODE=1, skipping environment selection ..."
+fi
 INPUT_ENVS=${INPUT_ENVS:-dev test prod}
 UNIQ_ENVS=($(for ENV in "${INPUT_ENVS[@]}"; do echo "${ENV}"; done | sort -u))
 echo "scaffold.sh: given environment names:"
 for ENV in ${UNIQ_ENVS[@]}; do echo "scaffold.sh:   - ${ENV}"; done
 
 echo "scaffold.sh: read available subscriptions ..."
-SUBS="$(az account list --query "[].name | sort(@)" -o tsv)"
-echo "scaffold.sh: subscriptions available:"
-for SUB in ${SUBS[@]}; do echo "scaffold.sh:   - ${SUB}"; done
 
-echo "scaffold.sh: determine subscriptions ..."
 declare -A ENV_TO_SUB_MAP
-for ENV in ${UNIQ_ENVS[@]}; do
-  _get-sub-for-env "${ENV}"
-  ENV_TO_SUB_MAP[${ENV}]="${INPUT_SUB}"
-done
+if [ ! "${TEST_MODE}" == "1" ]; then
+  SUBS="$(az account list --query "[].name | sort(@)" -o tsv)"
+  echo "scaffold.sh: subscriptions available:"
+  for SUB in ${SUBS[@]}; do echo "scaffold.sh:   - ${SUB}"; done
+
+  echo "scaffold.sh: determine subscriptions ..."
+  for ENV in ${UNIQ_ENVS[@]}; do
+    _get-sub-for-env "${ENV}"
+    ENV_TO_SUB_MAP[${ENV}]="${INPUT_SUB}"
+  done
+else
+  echo "scaffold.sh: TEST_MODE=1, skipping subscription selection ..."
+  for ENV in ${UNIQ_ENVS[@]}; do
+    ENV_TO_SUB_MAP[${ENV}]="test-sub-${ENV}"
+  done
+fi
 
 echo -e "\nscaffold.sh:\n  project will be scaffolded in '${ROOT_DIR}'\n  with the following configuration:"
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
