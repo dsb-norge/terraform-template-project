@@ -14,8 +14,8 @@ The following tooling must be installed in order for scaffolding and bootstrappi
 
 - jq - command-line JSON processor
   - `sudo apt-get update && sudo apt-get install -y jq`
-- Azure CLI - https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
-- Terraform - https://www.terraform.io/downloads
+- Azure CLI - <https://docs.microsoft.com/en-us/cli/azure/install-azure-cli>
+- Terraform - <https://www.terraform.io/downloads>
 
 ## How to
 
