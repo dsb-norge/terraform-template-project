@@ -1,4 +1,4 @@
-<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate -->
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate mktemp tflint -->
 # TODO set title for the project README here
 
 TODO Add relevant project information here.

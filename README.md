@@ -1,4 +1,4 @@
-<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate mktemp -->
+<!-- cSpell:ignore realpath chdir mapfile pushd popd apim strg terraformstate mktemp tflint -->
 # terraform-template-project
 
 Template project for terraform featuring scripted scaffolding and bootstrapping of remote state.
