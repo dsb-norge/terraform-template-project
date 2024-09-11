@@ -45,10 +45,6 @@ modules/**/.terraform.lock.hcl
 # Other
 ###############################################################################
 
-
-# VScode files
-**/.vscode/*
-
 # Idea and key file
 *.idea/
 *.key
