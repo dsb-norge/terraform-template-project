@@ -1,7 +1,7 @@
 # No validation, this is handled by the module itself.
-variable "subscription_number" {
-  description = "Subscription number to use when naming resources."
-  type        = number
+variable "application_friendly_description" {
+  description = "Friendly description of the application to use when naming resources."
+  type        = string
 }
 
 variable "application_name" {
@@ -14,8 +14,8 @@ variable "application_name_short" {
   type        = string
 }
 
-variable "application_friendly_description" {
-  description = "Friendly description of the application to use when naming resources."
+variable "created_by_tag" {
+  description = "Tag to use when naming resources."
   type        = string
 }
 
@@ -24,7 +24,7 @@ variable "environment_name" {
   type        = string
 }
 
-variable "created_by_tag" {
-  description = "Tag to use when naming resources."
-  type        = string
+variable "subscription_number" {
+  description = "Subscription number to use when naming resources."
+  type        = number
 }
