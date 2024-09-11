@@ -2,19 +2,19 @@
 
 TODO Add relevant project information here.
 
-
 ## Prerequisites
+
 The following tooling is required:
-- git - https://git-scm.com/download
-- Azure CLI - https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
-- Terraform - https://www.terraform.io/downloads
+
+- git - <https://git-scm.com/download>
+- Azure CLI - <https://docs.microsoft.com/en-us/cli/azure/install-azure-cli>
+- Terraform - <https://www.terraform.io/downloads>
 - jq and unzip command line tools (required for linting):
   - `sudo apt-get update && sudo apt-get install -y jq unzip`
 
-
 ## Project structure
 
-```
+```txt
 .
 ├── README.md             <-- This file
 ├── envs                  <-- Separate sub-directory for each environment
@@ -35,7 +35,6 @@ The following tooling is required:
 
 Below are example command invocations for working with this project.
 
-
 [BOOTSTRAP_VALUE_README_SEC_ENV_CMDS]
 
 ### Terraform state resources
@@ -43,7 +42,6 @@ Below are example command invocations for working with this project.
 The following are example command invocations for managing terraform backend state resources for this project.
 
 For commands to issue locally in the `envs/_terraform-state` directory see [envs/_terraform-state/README.md](envs/_terraform-state/README.md).
-
 
 [BOOTSTRAP_VALUE_README_SEC_STATE_CMDS]
 
