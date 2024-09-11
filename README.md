@@ -45,7 +45,9 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 .
 ├── README.md
 ├── envs
+│   ├── README.md
 │   ├── _terraform-state
+│   │   ├── README.md
 │   │   ├── backend-config.env1.hcl
 │   │   ├── backend-config.env2.hcl
 │   │   ├── backend.tf
@@ -55,6 +57,8 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 │   │   ├── outputs.tf
 │   │   └── variables.tf
 │   ├── env1
+│   │   ├── .az-subscription
+│   │   ├── README.md
 │   │   ├── backend.tf
 │   │   ├── main.tf
 │   │   ├── outputs.tf
@@ -62,11 +66,13 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 │   │   ├── variables.tf
 │   │   └── versions.tf
 │   └── env2
-│       ├── backend.tf
+│       ├── .az-subscription
 │       ├── ...
 ├── main
+│   ├── README.md
 │   ├── main.tf
 │   ├── outputs.tf
+│   ├── providers.tf
 │   └── variables.tf
 └── modules
     └── README.md
