@@ -147,6 +147,8 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
   if [ ! "${TEST_MODE}" == "1" ]; then
     echo "bootstrap.sh:   select subscription ..."
     az account set --subscription "${SUB_NAME}"
+    export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+    echo "bootstrap.sh:   subscription id: ${ARM_SUBSCRIPTION_ID}"
 
     echo "bootstrap.sh:   terraform init '${ENV_NAME}' environment ..."
     terraform init -reconfigure
@@ -206,6 +208,8 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
   HINT_FILE="${ENV_DIR}/.az-subscription"
   echo "bootstrap.sh:   write subscription hint file '${SUB_NAME}' --> '${HINT_FILE}'"
   echo "${SUB_NAME}" >"${HINT_FILE}"
+
+  unset ARM_SUBSCRIPTION_ID
 
 done # Loop over envs
 popd >/dev/null 2>&1 || :
