@@ -1,0 +1,21 @@
+{
+  "recommendations": [
+    "azapi-vscode.azapi",
+    "davidanson.vscode-markdownlint",
+    "eamodio.gitlens",
+    "fabiospampinato.vscode-open-in-github",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "gruntfuggly.todo-tree",
+    "hashicorp.hcl",
+    "hashicorp.terraform",
+    "jeff-hykin.code-eol",
+    "ms-vscode.azure-account",
+    "run-at-scale.terraform-doc-snippets",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-norwegian-bokmal",
+    "wayou.vscode-todo-highlight",
+    "yzhang.markdown-all-in-one",
+    "ziyasal.vscode-open-in-github"
+  ]
+}
