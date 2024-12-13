@@ -112,6 +112,7 @@ rm -rf "${ROOT_DIR}/.github" || : # allow not to exist
 mv -f ${TEMPLATE_DIR}/* "${ROOT_DIR}"
 mv -f "${TEMPLATE_DIR}/.gitignore" "${ROOT_DIR}/.gitignore"
 mv -f "${ROOT_DIR}/dotGithub" "${ROOT_DIR}/.github"
+mv -f "${ROOT_DIR}/dotVscode" "${ROOT_DIR}/.vscode"
 rm -r "${TEMPLATE_DIR}"
 declare -A ENV_TO_VARS_FILE_MAP
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
