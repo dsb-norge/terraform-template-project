@@ -53,6 +53,10 @@ The DSB Terraform helpers script caches some files locally to speed up operation
 # load tf-helpers, make sure to be authenticated with GitHub cli in advance
 source <(gh api -H "Accept: application/vnd.github.v3.raw" /repos/dsb-norge/terraform-helpers/contents/dsb-tf-proj-helpers.sh) ;
 
-# clean up cached files
+# clean up cached files in environment directories
 tf-clean-all
+
+# clean up cached files in the terraform state project
+rm -rf envs/_terraform-state/.terraform
+rm -rf envs/_terraform-state/.tflint
 ```
