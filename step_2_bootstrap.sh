@@ -257,10 +257,6 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
   sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${TFSTATE_ENV_CMD_FILE}"       # tfstate readme
   sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${ROOT_TFSTATE_ENV_CMD_FILE}"  # root tfstate readme
 
-  # add environment name to readmes
-  TO_INSERT="environment='${ENV_NAME}'"
-  sed -i "s/\[BOOTSTRAP_VALUE_CMD_SET_ENV\]/${TO_INSERT}/g" "${ROOT_ENV_CMD_FILE}"  # root readme
-
   # Write readme for current env
   sed \
     -e '/\[BOOTSTRAP_VALUE_README_SEC_ENV_CMDS\]/ {' \
@@ -294,11 +290,10 @@ done # loop over envs from bootstrap config
 echo "bootstrap.sh:   - $(_rel-path "${TFSTATE_README}")"
 _replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_STATE_CMDS' "${TFSTATE_README}" "${TFSTATE_CMD_FILE}"
 
-# Write root readme: root template + env commands + tfstate commands
+# Write root readme: root template + env commands
 echo "bootstrap.sh:   - $(_rel-path "${TFSTATE_README}")"
 cp -f "${ROOT_README_TEMPLATE_FILE}" "${ROOT_README_FILE}"
 _replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_ENV_CMDS' "${ROOT_README_FILE}" "${ROOT_CMD_FILE}"
-_replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_STATE_CMDS' "${ROOT_README_FILE}" "${ROOT_TFSTATE_CMD_FILE}"
 
 # remove intermediate temp files
 rm "${TFSTATE_CMD_FILE}"
