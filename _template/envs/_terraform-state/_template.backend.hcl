@@ -3,7 +3,7 @@
 
 # NOTE:
 #   The actual configuration of the azurerm backend for each environment
-#   recides in the 'backend-config.ENV.hcl' files.
+#   resides in the 'backend-config.ENV.hcl' files.
 terraform {
   backend "azurerm" {}
 }

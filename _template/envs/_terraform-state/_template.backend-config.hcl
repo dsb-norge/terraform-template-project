@@ -8,3 +8,4 @@ resource_group_name  = "[BOOTSTRAP_VALUE_RG_NAME]"
 storage_account_name = "[BOOTSTRAP_VALUE_STRG_ACC_NAME]"
 container_name       = "[BOOTSTRAP_VALUE_STATE_NAME]"
 key                  = "env.terraform-state"
+use_azuread_auth     = true
