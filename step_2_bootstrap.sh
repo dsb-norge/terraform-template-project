@@ -153,6 +153,9 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
     echo "bootstrap.sh:   terraform init '${ENV_NAME}' environment ..."
     terraform init -reconfigure
 
+    echo "bootstrap.sh:   add additional hashes to lock file '${ENV_NAME}' environment ..."
+    terraform providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64 -platform=linux_arm64
+
     echo "bootstrap.sh:   terraform apply '${ENV_NAME}' environment ..."
     terraform apply -var-file="${ENV_TFVARS_FILE}"
 
