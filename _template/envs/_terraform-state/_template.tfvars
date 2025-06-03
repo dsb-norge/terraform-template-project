@@ -10,4 +10,5 @@ application_name                 = "TODO"
 application_name_short           = "TODO"
 application_friendly_description = "TODO"
 environment_name                 = "[SCAFFOLD_VALUE_ENVIRONMENT_NAME]"
-created_by_tag                   = "https://github.com/dsb-norge/TODO:"
+created_by_tag                   = "https://github.com/dsb-infra/TODO:"
+maintainers_group_object_ids     = ["TODO"] # object IDs of the Entra ID group with access to the state container
