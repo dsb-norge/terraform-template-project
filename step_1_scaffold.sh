@@ -127,7 +127,7 @@ for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   # add env to GitHub validate workflow
   cat <<EOF >> "${GH_WORKFLOW_FILE}"
         - environment: "${ENV}"
-          url: "https://github.com/dsb-norge/:TODO:/blob/main/envs/${ENV}/main.tf"
+          url: "https://github.com/dsb-infra/:TODO:/blob/main/envs/${ENV}/main.tf"
 EOF
 done
 
