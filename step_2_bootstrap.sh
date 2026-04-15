@@ -60,8 +60,6 @@ function _replace-tag-with-file {
 }
 
 echo "bootstrap.sh: working directory: ${ROOT_DIR}"
-echo "bootstrap.sh:   - terraform state env directory: $(_rel-path "${TF_STATE_ENV_DIR}")"
-echo "bootstrap.sh:   - terraform state env backend file: $(_rel-path "${TF_STATE_BACKEND_FILE}")"
 
 echo "bootstrap.sh: check prerequirements ..."
 SHOULD_EXIT=0
@@ -77,10 +75,6 @@ if ! command -v terraform -version &>/dev/null; then
   echo 'bootstrap.sh: ERROR: Missing prerequsite: terraform - infrastructure as code software tool. Please install manually.'
   SHOULD_EXIT=255
 fi
-if [ ! -d "${TF_STATE_ENV_DIR}" ]; then
-  echo "bootstrap.sh: ERROR: Missing terraform state env directory, expected at '${TF_STATE_ENV_DIR}'"
-  SHOULD_EXIT=255
-fi
 if [ ! -f "${BOOTSTRAP_CONFIG_FILE}" ]; then
   echo "bootstrap.sh: ERROR: Missing bootstrap configuration file, expected at '${BOOTSTRAP_CONFIG_FILE}'"
   SHOULD_EXIT=255
@@ -93,8 +87,29 @@ fi
 echo "bootstrap.sh: read bootstrap configuration file, at $(_rel-path "${BOOTSTRAP_CONFIG_FILE}")"
 BOOTSTRAP_CONFIG_JSON=$(cat "${BOOTSTRAP_CONFIG_FILE}")
 
+# read state management mode
+MANAGE_STATE_CONTAINERS=$(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.manage_state_containers')
+ENVS_JSON=$(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.environments')
+
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "bootstrap.sh: mode: self-contained state management"
+else
+  echo "bootstrap.sh: mode: external state management"
+fi
+
+# validate _terraform-state dir exists for self-contained mode
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ] && [ ! -d "${TF_STATE_ENV_DIR}" ]; then
+  echo "bootstrap.sh: ERROR: Missing terraform state env directory, expected at '${TF_STATE_ENV_DIR}'"
+  exit 255
+fi
+
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "bootstrap.sh:   - terraform state env directory: $(_rel-path "${TF_STATE_ENV_DIR}")"
+  echo "bootstrap.sh:   - terraform state env backend file: $(_rel-path "${TF_STATE_BACKEND_FILE}")"
+fi
+
 echo "bootstrap.sh: verify that all subscriptions are available ..."
-for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
+for ENV_OBJ in $(echo "${ENVS_JSON}" | jq -r '.[] | @base64'); do
   SUB_NAME="$(_jq '.subscription')"
   ENV_NAME="$(_jq '.environment')"
   echo "bootstrap.sh:   - subscription: ${SUB_NAME} -> environment dir: ${ENV_NAME}"
@@ -107,131 +122,176 @@ done
 
 _yes-or-no "Ready to bootstrap project, does the above 🔼 look correct?" || exit 0
 
-# Loop over envs and bootstrap
-pushd "${TF_STATE_ENV_DIR}" >/dev/null
-for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
-  SUB_NAME="$(_jq '.subscription')"
-  ENV_NAME="$(_jq '.environment')"
+# ============================================================================
+# Self-contained state management: run terraform to create state resources
+# ============================================================================
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
 
-  ENV_DIR="${ROOT_DIR}/envs/${ENV_NAME}"
-  ENV_BACKEND_FILE="${ENV_DIR}/backend.tf"
-  ENV_BACKEND_TEMPLATE_FILE="${ENV_DIR}/_template.backend.hcl"
+  pushd "${TF_STATE_ENV_DIR}" >/dev/null
+  for ENV_OBJ in $(echo "${ENVS_JSON}" | jq -r '.[] | @base64'); do
+    SUB_NAME="$(_jq '.subscription')"
+    ENV_NAME="$(_jq '.environment')"
 
-  ENV_TFVARS_FILE_NAME="env.${ENV_NAME}.tfvars"
-  ENV_TF_STATE_BACKEND_VARS_FILE_NAME="backend-config.${ENV_NAME}.hcl"
-  ENV_TFVARS_FILE="${TF_STATE_ENV_DIR}/${ENV_TFVARS_FILE_NAME}"
-  ENV_TF_STATE_BACKEND_VARS_FILE="${TF_STATE_ENV_DIR}/${ENV_TF_STATE_BACKEND_VARS_FILE_NAME}"
+    ENV_DIR="${ROOT_DIR}/envs/${ENV_NAME}"
+    ENV_BACKEND_FILE="${ENV_DIR}/backend.tf"
+    ENV_BACKEND_TEMPLATE_FILE="${ENV_DIR}/_template.backend.hcl"
 
-  echo "bootstrap.sh: bootstrapping environment '${ENV_NAME}' ..."
-  echo "bootstrap.sh:   - subscription name: ${SUB_NAME}"
-  echo "bootstrap.sh:   - tfvars file: $(_rel-path "${ENV_TFVARS_FILE}")"
-  echo "bootstrap.sh:   - backend file: $(_rel-path "${ENV_BACKEND_FILE}")"
-  echo "bootstrap.sh:   - tfstate backend file: $(_rel-path "${ENV_TF_STATE_BACKEND_VARS_FILE}")"
+    ENV_TFVARS_FILE_NAME="env.${ENV_NAME}.tfvars"
+    ENV_TF_STATE_BACKEND_VARS_FILE_NAME="backend-config.${ENV_NAME}.hcl"
+    ENV_TFVARS_FILE="${TF_STATE_ENV_DIR}/${ENV_TFVARS_FILE_NAME}"
+    ENV_TF_STATE_BACKEND_VARS_FILE="${TF_STATE_ENV_DIR}/${ENV_TF_STATE_BACKEND_VARS_FILE_NAME}"
 
-  if [ ! -f "${ENV_TFVARS_FILE}" ]; then
-    echo "bootstrap.sh:   aborting, as tfvars file for environment '${ENV_NAME}' does not exist at '$(_rel-path "${ENV_TFVARS_FILE}")'"
-    exit 1
-  fi
+    echo "bootstrap.sh: bootstrapping environment '${ENV_NAME}' ..."
+    echo "bootstrap.sh:   - subscription name: ${SUB_NAME}"
+    echo "bootstrap.sh:   - tfvars file: $(_rel-path "${ENV_TFVARS_FILE}")"
+    echo "bootstrap.sh:   - backend file: $(_rel-path "${ENV_BACKEND_FILE}")"
+    echo "bootstrap.sh:   - tfstate backend file: $(_rel-path "${ENV_TF_STATE_BACKEND_VARS_FILE}")"
 
-  if [ -f "${ENV_BACKEND_FILE}" ]; then
-    echo "bootstrap.sh:   skipping, as backend file for environment '${ENV_NAME}' allready exists at '$(_rel-path "${ENV_BACKEND_FILE}")'"
-    continue # with next environment
-  fi
-
-  if [ -f "${TF_STATE_BACKEND_FILE}" ]; then
-    echo "bootstrap.sh:   removing backend.tf (created during bootstraping of previous environment) at '$(_rel-path "${TF_STATE_BACKEND_FILE}")'"
-    rm "${TF_STATE_BACKEND_FILE}"
-  fi
-
-  declare -A TF_OUTPUTS
-  if [ ! "${TEST_MODE}" == "1" ]; then
-    echo "bootstrap.sh:   select subscription ..."
-    az account set --subscription "${SUB_NAME}"
-    export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-    echo "bootstrap.sh:   subscription id: ${ARM_SUBSCRIPTION_ID}"
-
-    echo "bootstrap.sh:   terraform init '${ENV_NAME}' environment ..."
-    terraform init -reconfigure
-
-    echo "bootstrap.sh:   add additional hashes to lock file '${ENV_NAME}' environment ..."
-    terraform providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64 -platform=linux_arm64
-
-    echo "bootstrap.sh:   terraform apply '${ENV_NAME}' environment ..."
-    terraform apply -var-file="${ENV_TFVARS_FILE}"
-
-    echo "bootstrap.sh:   read terraform outputs for '${ENV_NAME}' environment ..."
-    TF_OUTPUTS[resource_group_name]="$(terraform output -json | jq -r '.resource_group_name.value')"
-    TF_OUTPUTS[storage_account_name]=$(terraform output -json | jq -r '.storage_account_name.value')
-    TF_OUTPUTS[container_name]=$(terraform output -json | jq -r '.container_name.value')
-  else
-    echo "bootstrap.sh: TEST_MODE is enabled, skipping terraform operations ..."
-    TF_OUTPUTS[resource_group_name]="test-rg-${ENV_NAME}"
-    TF_OUTPUTS[storage_account_name]="teststrgacc${ENV_NAME}"
-    TF_OUTPUTS[container_name]="testcontainer${ENV_NAME}"
-  fi
-
-  echo "${TF_OUTPUTS[@]}"
-
-  echo "bootstrap.sh:   create terraform backend config for ${ENV_NAME} environment at '$(_rel-path "${ENV_BACKEND_FILE}")'"
-  mv "${ENV_BACKEND_TEMPLATE_FILE}" "${ENV_BACKEND_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_RG_NAME\]/${TF_OUTPUTS[resource_group_name]}/g" "${ENV_BACKEND_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_STRG_ACC_NAME\]/${TF_OUTPUTS[storage_account_name]}/g" "${ENV_BACKEND_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_STATE_NAME\]/${TF_OUTPUTS[container_name]}/g" "${ENV_BACKEND_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_BACKEND_FILE}"
-
-  echo "bootstrap.sh:   create terraform backend config for terraform-state in ${ENV_NAME} environment at '$(_rel-path "${ENV_TF_STATE_BACKEND_VARS_FILE}")'"
-  cp "${TF_STATE_BACKEND_VARS_TEMPLATE_FILE}" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_RG_NAME\]/${TF_OUTPUTS[resource_group_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_STRG_ACC_NAME\]/${TF_OUTPUTS[storage_account_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_STATE_NAME\]/${TF_OUTPUTS[container_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
-  sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
-
-  echo "bootstrap.sh:   create terraform state project backend file at '$(_rel-path "${TF_STATE_BACKEND_FILE}")'"
-  cp -f "${TF_STATE_BACKEND_TEMPLATE_FILE}" "${TF_STATE_BACKEND_FILE}"
-
-  if [ ! "${TEST_MODE}" == "1" ]; then
-    echo "bootstrap.sh:   migrate state for terraform state project to remote container ..."
-    terraform init -backend-config="${ENV_TF_STATE_BACKEND_VARS_FILE}" -migrate-state -force-copy
-  else
-    echo "bootstrap.sh: TEST_MODE is enabled, skipping terraform operations ..."
-    for STATE_FILE in "${TF_STATE_REMOTE_STATE_FILES[@]}"; do
-      mkdir -p "$(dirname "${STATE_FILE}")"
-      touch "${STATE_FILE}"
-    done
-  fi
-
-  echo "bootstrap.sh:   removing state files ..."
-  for STATE_FILE in "${TF_STATE_REMOTE_STATE_FILES[@]}"; do
-    if [ -f "${STATE_FILE}" ]; then
-      echo "bootstrap.sh:     - at '$(_rel-path "${STATE_FILE}")'"
-      rm -f "${STATE_FILE}"
+    if [ ! -f "${ENV_TFVARS_FILE}" ]; then
+      echo "bootstrap.sh:   aborting, as tfvars file for environment '${ENV_NAME}' does not exist at '$(_rel-path "${ENV_TFVARS_FILE}")'"
+      exit 1
     fi
-  done
 
-  HINT_FILE="${ENV_DIR}/.az-subscription"
-  echo "bootstrap.sh:   write subscription hint file '${SUB_NAME}' --> '${HINT_FILE}'"
-  echo "${SUB_NAME}" >"${HINT_FILE}"
+    if [ -f "${ENV_BACKEND_FILE}" ]; then
+      echo "bootstrap.sh:   skipping, as backend file for environment '${ENV_NAME}' allready exists at '$(_rel-path "${ENV_BACKEND_FILE}")'"
+      continue # with next environment
+    fi
 
-  unset ARM_SUBSCRIPTION_ID
+    if [ -f "${TF_STATE_BACKEND_FILE}" ]; then
+      echo "bootstrap.sh:   removing backend.tf (created during bootstraping of previous environment) at '$(_rel-path "${TF_STATE_BACKEND_FILE}")'"
+      rm "${TF_STATE_BACKEND_FILE}"
+    fi
 
-done # Loop over envs
-popd >/dev/null 2>&1 || :
+    declare -A TF_OUTPUTS
+    if [ ! "${TEST_MODE}" == "1" ]; then
+      echo "bootstrap.sh:   select subscription ..."
+      az account set --subscription "${SUB_NAME}"
+      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+      echo "bootstrap.sh:   subscription id: ${ARM_SUBSCRIPTION_ID}"
 
+      echo "bootstrap.sh:   terraform init '${ENV_NAME}' environment ..."
+      terraform init -reconfigure
+
+      echo "bootstrap.sh:   add additional hashes to lock file '${ENV_NAME}' environment ..."
+      terraform providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64 -platform=linux_arm64
+
+      echo "bootstrap.sh:   terraform apply '${ENV_NAME}' environment ..."
+      terraform apply -var-file="${ENV_TFVARS_FILE}"
+
+      echo "bootstrap.sh:   read terraform outputs for '${ENV_NAME}' environment ..."
+      TF_OUTPUTS[resource_group_name]="$(terraform output -json | jq -r '.resource_group_name.value')"
+      TF_OUTPUTS[storage_account_name]=$(terraform output -json | jq -r '.storage_account_name.value')
+      TF_OUTPUTS[container_name]=$(terraform output -json | jq -r '.container_name.value')
+    else
+      echo "bootstrap.sh: TEST_MODE is enabled, skipping terraform operations ..."
+      TF_OUTPUTS[resource_group_name]="test-rg-${ENV_NAME}"
+      TF_OUTPUTS[storage_account_name]="teststrgacc${ENV_NAME}"
+      TF_OUTPUTS[container_name]="testcontainer${ENV_NAME}"
+    fi
+
+    echo "${TF_OUTPUTS[@]}"
+
+    echo "bootstrap.sh:   create terraform backend config for ${ENV_NAME} environment at '$(_rel-path "${ENV_BACKEND_FILE}")'"
+    mv "${ENV_BACKEND_TEMPLATE_FILE}" "${ENV_BACKEND_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_RG_NAME\]/${TF_OUTPUTS[resource_group_name]}/g" "${ENV_BACKEND_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_STRG_ACC_NAME\]/${TF_OUTPUTS[storage_account_name]}/g" "${ENV_BACKEND_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_STATE_NAME\]/${TF_OUTPUTS[container_name]}/g" "${ENV_BACKEND_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_BACKEND_FILE}"
+
+    echo "bootstrap.sh:   create terraform backend config for terraform-state in ${ENV_NAME} environment at '$(_rel-path "${ENV_TF_STATE_BACKEND_VARS_FILE}")'"
+    cp "${TF_STATE_BACKEND_VARS_TEMPLATE_FILE}" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_RG_NAME\]/${TF_OUTPUTS[resource_group_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_STRG_ACC_NAME\]/${TF_OUTPUTS[storage_account_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_STATE_NAME\]/${TF_OUTPUTS[container_name]}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_TF_STATE_BACKEND_VARS_FILE}"
+
+    echo "bootstrap.sh:   create terraform state project backend file at '$(_rel-path "${TF_STATE_BACKEND_FILE}")'"
+    cp -f "${TF_STATE_BACKEND_TEMPLATE_FILE}" "${TF_STATE_BACKEND_FILE}"
+
+    if [ ! "${TEST_MODE}" == "1" ]; then
+      echo "bootstrap.sh:   migrate state for terraform state project to remote container ..."
+      terraform init -backend-config="${ENV_TF_STATE_BACKEND_VARS_FILE}" -migrate-state -force-copy
+    else
+      echo "bootstrap.sh: TEST_MODE is enabled, skipping terraform operations ..."
+      for STATE_FILE in "${TF_STATE_REMOTE_STATE_FILES[@]}"; do
+        mkdir -p "$(dirname "${STATE_FILE}")"
+        touch "${STATE_FILE}"
+      done
+    fi
+
+    echo "bootstrap.sh:   removing state files ..."
+    for STATE_FILE in "${TF_STATE_REMOTE_STATE_FILES[@]}"; do
+      if [ -f "${STATE_FILE}" ]; then
+        echo "bootstrap.sh:     - at '$(_rel-path "${STATE_FILE}")'"
+        rm -f "${STATE_FILE}"
+      fi
+    done
+
+    HINT_FILE="${ENV_DIR}/.az-subscription"
+    echo "bootstrap.sh:   write subscription hint file '${SUB_NAME}' --> '${HINT_FILE}'"
+    echo "${SUB_NAME}" >"${HINT_FILE}"
+
+    unset ARM_SUBSCRIPTION_ID
+
+  done # Loop over envs
+  popd >/dev/null 2>&1 || :
+
+fi # end self-contained state management
+
+# ============================================================================
+# External state management: create backend.tf with placeholder values
+# ============================================================================
+if [ "${MANAGE_STATE_CONTAINERS}" != "true" ]; then
+
+  for ENV_OBJ in $(echo "${ENVS_JSON}" | jq -r '.[] | @base64'); do
+    SUB_NAME="$(_jq '.subscription')"
+    ENV_NAME="$(_jq '.environment')"
+
+    ENV_DIR="${ROOT_DIR}/envs/${ENV_NAME}"
+    ENV_BACKEND_FILE="${ENV_DIR}/backend.tf"
+    ENV_BACKEND_TEMPLATE_FILE="${ENV_DIR}/_template.backend.hcl"
+
+    echo "bootstrap.sh: setting up environment '${ENV_NAME}' ..."
+    echo "bootstrap.sh:   - subscription name: ${SUB_NAME}"
+    echo "bootstrap.sh:   - backend file: $(_rel-path "${ENV_BACKEND_FILE}")"
+
+    if [ -f "${ENV_BACKEND_FILE}" ]; then
+      echo "bootstrap.sh:   skipping, as backend file for environment '${ENV_NAME}' already exists at '$(_rel-path "${ENV_BACKEND_FILE}")'"
+      continue
+    fi
+
+    echo "bootstrap.sh:   create terraform backend config for ${ENV_NAME} environment at '$(_rel-path "${ENV_BACKEND_FILE}")'"
+    mv "${ENV_BACKEND_TEMPLATE_FILE}" "${ENV_BACKEND_FILE}"
+    sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_BACKEND_FILE}"
+
+    HINT_FILE="${ENV_DIR}/.az-subscription"
+    echo "bootstrap.sh:   write subscription hint file '${SUB_NAME}' --> '${HINT_FILE}'"
+    echo "${SUB_NAME}" >"${HINT_FILE}"
+
+  done # Loop over envs
+
+fi # end external state management
+
+# ============================================================================
+# Build README files
+# ============================================================================
 echo "bootstrap.sh: build README files ..."
 
-# final readme for tfstate
-TFSTATE_README="${TF_STATE_ENV_DIR}/README.md"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  # final readme for tfstate
+  TFSTATE_README="${TF_STATE_ENV_DIR}/README.md"
 
-# temp files to build readme blocks when looping throughenvs
-TFSTATE_CMD_FILE="${TF_STATE_ENV_DIR}/_temp.all-commands.README.md"          # tstate readme all envs
-TFSTATE_ENV_CMD_FILE="${TF_STATE_ENV_DIR}/_temp.commands.README.md"          # tstate readme current env
-ROOT_TFSTATE_CMD_FILE="${ROOT_DIR}/_temp.tfstate-all-commands.README.md"     # root tfstate readme all envs
-ROOT_TFSTATE_ENV_CMD_FILE="${ROOT_DIR}/_temp.tfstate-env-commands.README.md" # root tfstate readme current env
+  # temp files to build readme blocks when looping through envs
+  TFSTATE_CMD_FILE="${TF_STATE_ENV_DIR}/_temp.all-commands.README.md"          # tstate readme all envs
+  TFSTATE_ENV_CMD_FILE="${TF_STATE_ENV_DIR}/_temp.commands.README.md"          # tstate readme current env
+  ROOT_TFSTATE_CMD_FILE="${ROOT_DIR}/_temp.tfstate-all-commands.README.md"     # root tfstate readme all envs
+  ROOT_TFSTATE_ENV_CMD_FILE="${ROOT_DIR}/_temp.tfstate-env-commands.README.md" # root tfstate readme current env
+fi
 ROOT_CMD_FILE="${ROOT_DIR}/_temp.all-commands.README.md"                     # root readme all envs
 ROOT_ENV_CMD_FILE="${ROOT_DIR}/_temp.env-commands.README.md"                 # root readme current env
 
 # loop over envs from bootstrap config and build readme files
-for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
+for ENV_OBJ in $(echo "${ENVS_JSON}" | jq -r '.[] | @base64'); do
   ENV_NAME="$(_jq '.environment')"
   SUB_NAME="$(_jq '.subscription')"
   ENV_DIR="${ROOT_DIR}/envs/${ENV_NAME}"
@@ -249,16 +309,22 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
   ENV_CMD_FILE="${ENV_DIR}/_temp.env-commands.README.md"
 
   # create readmes from template
-  cp -f "${COMMANDS_TEMPLATE_FILE_ENV}" "${ENV_CMD_FILE}"                     # env readme
-  cp -f "${COMMANDS_TEMPLATE_FILE_STATE}" "${TFSTATE_ENV_CMD_FILE}"           # tfstate readme
-  cp -f "${COMMANDS_TEMPLATE_FILE_ROOT_ENV}" "${ROOT_ENV_CMD_FILE}"           # root env readme
-  cp -f "${COMMANDS_TEMPLATE_FILE_ROOT_STATE}" "${ROOT_TFSTATE_ENV_CMD_FILE}" # root tfstate readme
+  cp -f "${COMMANDS_TEMPLATE_FILE_ENV}" "${ENV_CMD_FILE}"         # env readme
+  cp -f "${COMMANDS_TEMPLATE_FILE_ROOT_ENV}" "${ROOT_ENV_CMD_FILE}" # root env readme
+
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    cp -f "${COMMANDS_TEMPLATE_FILE_STATE}" "${TFSTATE_ENV_CMD_FILE}"           # tfstate readme
+    cp -f "${COMMANDS_TEMPLATE_FILE_ROOT_STATE}" "${ROOT_TFSTATE_ENV_CMD_FILE}" # root tfstate readme
+  fi
 
   # add subscription selection command to readmes
   TO_INSERT="az account set --subscription '${SUB_NAME}'"
   sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${ENV_CMD_FILE}"               # env readme
-  sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${TFSTATE_ENV_CMD_FILE}"       # tfstate readme
-  sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${ROOT_TFSTATE_ENV_CMD_FILE}"  # root tfstate readme
+
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${TFSTATE_ENV_CMD_FILE}"       # tfstate readme
+    sed -i "s/\[BOOTSTRAP_VALUE_CMD_SEL_SUB\]/${TO_INSERT}/g" "${ROOT_TFSTATE_ENV_CMD_FILE}"  # root tfstate readme
+  fi
 
   # Write readme for current env
   sed \
@@ -270,49 +336,66 @@ for ENV_OBJ in $(echo "${BOOTSTRAP_CONFIG_JSON}" | jq -r '.[] | @base64'); do
 
   # Add env name to readmes
   sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ENV_README}"                # env name -> env readme
-  sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${TFSTATE_ENV_CMD_FILE}"      # env name -> tfstate readme
-  sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ROOT_TFSTATE_ENV_CMD_FILE}" # env name -> root tfstate readme
   sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ROOT_ENV_CMD_FILE}"         # env name -> root readme
+
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${TFSTATE_ENV_CMD_FILE}"      # env name -> tfstate readme
+    sed -i "s/\[BOOTSTRAP_VALUE_ENV_NAME\]/${ENV_NAME}/g" "${ROOT_TFSTATE_ENV_CMD_FILE}" # env name -> root tfstate readme
+  fi
 
   # Remove template readme for env
   rm "${ENV_README_TEMPLATE}"
 
   # collect command blocks for all envs in common temp files
-  cat "${TFSTATE_ENV_CMD_FILE}" >>"${TFSTATE_CMD_FILE}"           # tstate readme current env -> tstate readme all envs
-  cat "${ROOT_TFSTATE_ENV_CMD_FILE}" >>"${ROOT_TFSTATE_CMD_FILE}" # tstate readme current env -> root tstate readme all envs
   cat "${ROOT_ENV_CMD_FILE}" >>"${ROOT_CMD_FILE}"                 # readme current env -> root readme all envs
 
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    cat "${TFSTATE_ENV_CMD_FILE}" >>"${TFSTATE_CMD_FILE}"           # tstate readme current env -> tstate readme all envs
+    cat "${ROOT_TFSTATE_ENV_CMD_FILE}" >>"${ROOT_TFSTATE_CMD_FILE}" # tstate readme current env -> root tstate readme all envs
+  fi
+
   # remove intermediate env temp files
-  rm "${TFSTATE_ENV_CMD_FILE}"
-  rm "${ROOT_TFSTATE_ENV_CMD_FILE}"
   rm "${ROOT_ENV_CMD_FILE}"
+
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    rm "${TFSTATE_ENV_CMD_FILE}"
+    rm "${ROOT_TFSTATE_ENV_CMD_FILE}"
+  fi
 
 done # loop over envs from bootstrap config
 
-# Write readme for tfstate
-echo "bootstrap.sh:   - $(_rel-path "${TFSTATE_README}")"
-_replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_STATE_CMDS' "${TFSTATE_README}" "${TFSTATE_CMD_FILE}"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  # Write readme for tfstate
+  echo "bootstrap.sh:   - $(_rel-path "${TFSTATE_README}")"
+  _replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_STATE_CMDS' "${TFSTATE_README}" "${TFSTATE_CMD_FILE}"
+fi
 
 # Write root readme: root template + env commands
-echo "bootstrap.sh:   - $(_rel-path "${TFSTATE_README}")"
+echo "bootstrap.sh:   - $(_rel-path "${ROOT_README_FILE}")"
 cp -f "${ROOT_README_TEMPLATE_FILE}" "${ROOT_README_FILE}"
 _replace-tag-with-file 'BOOTSTRAP_VALUE_README_SEC_ENV_CMDS' "${ROOT_README_FILE}" "${ROOT_CMD_FILE}"
 
 # remove intermediate temp files
-rm "${TFSTATE_CMD_FILE}"
-rm "${ROOT_TFSTATE_CMD_FILE}"
 rm "${ROOT_CMD_FILE}"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  rm "${TFSTATE_CMD_FILE}"
+  rm "${ROOT_TFSTATE_CMD_FILE}"
+fi
 
 echo "bootstrap.sh: cleanup ..."
 CLEAN_FILES=(
-  "${TF_STATE_BACKEND_VARS_TEMPLATE_FILE}"
-  "${TF_STATE_BACKEND_TEMPLATE_FILE}"
   "${ROOT_README_TEMPLATE_FILE}"
   "${COMMANDS_TEMPLATE_FILE_ENV}"
-  "${COMMANDS_TEMPLATE_FILE_STATE}"
   "${COMMANDS_TEMPLATE_FILE_ROOT_ENV}"
-  "${COMMANDS_TEMPLATE_FILE_ROOT_STATE}"
 )
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  CLEAN_FILES+=(
+    "${TF_STATE_BACKEND_VARS_TEMPLATE_FILE}"
+    "${TF_STATE_BACKEND_TEMPLATE_FILE}"
+    "${COMMANDS_TEMPLATE_FILE_STATE}"
+    "${COMMANDS_TEMPLATE_FILE_ROOT_STATE}"
+  )
+fi
 for FILE in "${CLEAN_FILES[@]}"; do
   if [ -f "${FILE}" ]; then
     echo "bootstrap.sh:   - $(_rel-path "${FILE}")"
@@ -322,7 +405,15 @@ done
 
 echo -e "bootstrap.sh: bootstrapping complete.\n"
 echo "bootstrap.sh: next steps:"
-echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
-echo "bootstrap.sh:   2️⃣  Update project README.md in the root directory with relevant information."
-echo "bootstrap.sh:   3️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
-echo -e "bootstrap.sh:   4️⃣  Start developing your terraform project 😁\n"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
+  echo "bootstrap.sh:   2️⃣  Update project README.md in the root directory with relevant information."
+  echo "bootstrap.sh:   3️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
+  echo -e "bootstrap.sh:   4️⃣  Start developing your terraform project 😁\n"
+else
+  echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
+  echo "bootstrap.sh:   2️⃣  Edit backend.tf in each environment directory to point to the pre-provisioned state container."
+  echo "bootstrap.sh:   3️⃣  Update project README.md in the root directory with relevant information."
+  echo "bootstrap.sh:   4️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
+  echo -e "bootstrap.sh:   5️⃣  Start developing your terraform project 😁\n"
+fi

@@ -11,10 +11,15 @@ ENV_VARS_TEMPLATE_FILE="${TF_STATE_ENV_DIR}/_template.tfvars"
 BOOTSTRAP_CONFIG_FILE="${ROOT_DIR}/bootstrap.json"
 GH_WORKFLOW_FILE="${ROOT_DIR}/.github/workflows/validate.yml"
 
-# set TEST_MODE to 1 if first input arguments is "debug"
+# set TEST_MODE to 1 if first input argument starts with "debug"
 TEST_MODE=0
+MANAGE_STATE_CONTAINERS="" # will be set to "true" or "false"
 if [ "${1:-}" == "debug" ]; then
   TEST_MODE=1
+  MANAGE_STATE_CONTAINERS="true"
+elif [ "${1:-}" == "debug-external" ]; then
+  TEST_MODE=1
+  MANAGE_STATE_CONTAINERS="false"
 fi
 
 # Helper functions
@@ -69,6 +74,26 @@ if [ "${SHOULD_EXIT}" -ne 0 ]; then
   exit "${SHOULD_EXIT}"
 fi
 
+echo "scaffold.sh: determine state management mode ..."
+
+if [ -z "${MANAGE_STATE_CONTAINERS}" ]; then
+  echo ""
+  echo "scaffold.sh: This project can either manage its own terraform state containers"
+  echo "scaffold.sh: (self-contained) or reference externally managed state containers."
+  echo ""
+  if _yes-or-no "Will this project manage its own terraform state containers?"; then
+    MANAGE_STATE_CONTAINERS="true"
+  else
+    MANAGE_STATE_CONTAINERS="false"
+  fi
+fi
+
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "scaffold.sh: mode: self-contained state management"
+else
+  echo "scaffold.sh: mode: external state management"
+fi
+
 echo "scaffold.sh: determine environments ..."
 
 if [ ! "${TEST_MODE}" == "1" ]; then
@@ -102,6 +127,11 @@ else
 fi
 
 echo -e "\nscaffold.sh:\n  project will be scaffolded in '${ROOT_DIR}'\n  with the following configuration:"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "    - mode: self-contained state management"
+else
+  echo "    - mode: external state management"
+fi
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   echo -e "    - ${ENV}\t-> ${ENV_TO_SUB_MAP[${ENV}]}"
 done
@@ -114,6 +144,25 @@ mv -f "${TEMPLATE_DIR}/.gitignore" "${ROOT_DIR}/.gitignore"
 mv -f "${ROOT_DIR}/dotGithub" "${ROOT_DIR}/.github"
 mv -f "${ROOT_DIR}/dotVscode" "${ROOT_DIR}/.vscode"
 rm -r "${TEMPLATE_DIR}"
+
+# handle mode-specific template files
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  # self-contained: remove external-mode templates
+  rm -f "${ENV_TEMPLATE_DIR}/_template.backend-external.hcl"
+  rm -f "${ENV_TEMPLATE_DIR}/_template.README-external.md"
+  rm -f "${ROOT_DIR}/_template.README-external.md"
+else
+  # external: replace templates with external variants
+  mv -f "${ENV_TEMPLATE_DIR}/_template.backend-external.hcl" "${ENV_TEMPLATE_DIR}/_template.backend.hcl"
+  mv -f "${ENV_TEMPLATE_DIR}/_template.README-external.md" "${ENV_TEMPLATE_DIR}/_template.README.md"
+  mv -f "${ROOT_DIR}/_template.README-external.md" "${ROOT_DIR}/_template.README.md"
+  # remove _terraform-state directory and related files
+  rm -rf "${TF_STATE_ENV_DIR}"
+  # remove tfstate readme command templates (not needed for external mode)
+  rm -f "${ROOT_DIR}/_template.README.commands-section-tfstate.md"
+  rm -f "${ROOT_DIR}/_template.README.commands-section-root-tfstate.md"
+fi
+
 declare -A ENV_TO_VARS_FILE_MAP
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   echo "scaffold.sh: templating '${ENV}' environment ..."
@@ -121,8 +170,12 @@ for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   # create env dir from template
   mkdir -p "${ENVS_DIR}/${ENV}"
   cp -r ${ENV_TEMPLATE_DIR}/* "${ENVS_DIR}/${ENV}"
-  ENV_TO_VARS_FILE_MAP[${ENV}]="${TF_STATE_ENV_DIR}/env.${ENV}.tfvars"
-  sed "s/\[SCAFFOLD_VALUE_ENVIRONMENT_NAME\]/$ENV/g" ${ENV_VARS_TEMPLATE_FILE} >"${ENV_TO_VARS_FILE_MAP[${ENV}]}"
+
+  if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+    # self-contained: create tfvars files for state management
+    ENV_TO_VARS_FILE_MAP[${ENV}]="${TF_STATE_ENV_DIR}/env.${ENV}.tfvars"
+    sed "s/\[SCAFFOLD_VALUE_ENVIRONMENT_NAME\]/$ENV/g" ${ENV_VARS_TEMPLATE_FILE} >"${ENV_TO_VARS_FILE_MAP[${ENV}]}"
+  fi
 
   # add env to GitHub validate workflow
   cat <<EOF >> "${GH_WORKFLOW_FILE}"
@@ -132,24 +185,36 @@ EOF
 done
 
 echo "scaffold.sh: writing $(_rel-path "${BOOTSTRAP_CONFIG_FILE}") ..."
-OUT_JSON='[]'
+OUT_JSON='{"manage_state_containers": '$MANAGE_STATE_CONTAINERS', "environments": []}'
 for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
   OUT_OBJ="{}"
   _set-val "environment" "${ENV}"
   _set-val "subscription" "${ENV_TO_SUB_MAP[${ENV}]}"
-  OUT_JSON=$(echo "${OUT_JSON}" | jq '. += '["${OUT_OBJ}"']')
+  OUT_JSON=$(echo "${OUT_JSON}" | jq '.environments += '["${OUT_OBJ}"']')
 done
 echo "${OUT_JSON}" >"${BOOTSTRAP_CONFIG_FILE}"
 
 echo "scaffold.sh: cleanup ..."
 rm -rf "${ENV_TEMPLATE_DIR}"
-rm "${ENV_VARS_TEMPLATE_FILE}"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  rm "${ENV_VARS_TEMPLATE_FILE}"
+fi
 
 echo -e "scaffold.sh: scaffolding complete.\n"
 echo "scaffold.sh: next steps:"
-echo "scaffold.sh:   1️⃣  Edit values in the following files:"
-for VARS_FILE in "${ENV_TO_VARS_FILE_MAP[@]}"; do
-  echo "scaffold.sh:     - $(_rel-path "${VARS_FILE}")"
-done
-echo "scaffold.sh:   2️⃣  Run step_2_bootstrap.sh to bootstrap terraform backend state for all envs in the project:"
-echo -e "scaffold.sh:   3️⃣  Run step_3_remove_init_scripts.sh\n"
+if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
+  echo "scaffold.sh:   1️⃣  Edit values in the following files:"
+  for VARS_FILE in "${ENV_TO_VARS_FILE_MAP[@]}"; do
+    echo "scaffold.sh:     - $(_rel-path "${VARS_FILE}")"
+  done
+  echo "scaffold.sh:   2️⃣  Run step_2_bootstrap.sh to bootstrap terraform backend state for all envs in the project:"
+  echo -e "scaffold.sh:   3️⃣  Run step_3_remove_init_scripts.sh\n"
+else
+  echo "scaffold.sh:   1️⃣  Run step_2_bootstrap.sh to generate README files and backend.tf templates:"
+  echo "scaffold.sh:   2️⃣  Run step_3_remove_init_scripts.sh"
+  echo "scaffold.sh:   3️⃣  Edit backend.tf in each environment directory to point to the pre-provisioned state container:"
+  for ENV in "${!ENV_TO_SUB_MAP[@]}"; do
+    echo "scaffold.sh:     - $(_rel-path "${ENVS_DIR}/${ENV}/backend.tf")"
+  done
+  echo -e ""
+fi

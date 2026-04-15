@@ -7,13 +7,16 @@ This project simplifies multiple processes:
 
 1. Create scaffolding for a new terraform project, including config for multiple environments.
 2. Bootstrap terraform remote state in Azure for all environments.
-   - The remote state is handled in a separate "environment" called "_terraform-state", see `envs/_terraform-state/README.md` after scaffolding for more details.
+   - **Self-contained mode:** The remote state is created and managed in a separate "environment" called "_terraform-state", see `envs/_terraform-state/README.md` after scaffolding for more details.
+   - **External mode:** The remote state is managed externally (e.g. by a platform team in a central repo). The project only references the pre-provisioned state containers.
 
 <!-- omit in toc -->
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [How to](#how-to)
+  - [Self-contained state management](#self-contained-state-management)
+  - [External state management](#external-state-management)
 - [Resulting project structure](#resulting-project-structure)
 - [Maintainer documentation](#maintainer-documentation)
 
@@ -28,10 +31,13 @@ The following tooling must be installed in order for scaffolding and bootstrappi
 
 ## How to
 
-This is how you scaffold and bootstrap this project into an empty terraform project:
+### Self-contained state management
 
-1. Log in to yor Azure tenant using `az login`
+Use this mode when the project should create and manage its own terraform state containers in Azure.
+
+1. Log in to your Azure tenant using `az login`
 2. From the root of the project run `step_1_scaffold.sh`
+   - Answer **yes** when asked if the project will manage its own state containers.
    - Supply information about environments and Azure subscriptions as requested.
    - The script will now generate a project structure for you based on the information given.
 3. After the script completes edit the `env.ENV.tfvars` files as stated by the script execution output.
@@ -46,7 +52,24 @@ This is how you scaffold and bootstrap this project into an empty terraform proj
    - The script will remove all remaining files from the scaffolding and bootstrapping process.
    - Update this README with relevant information, tip: search for TODO.
 
+### External state management
+
+Use this mode when terraform state containers are pre-provisioned and managed externally (e.g. by a platform team).
+
+1. Log in to your Azure tenant using `az login`
+2. From the root of the project run `step_1_scaffold.sh`
+   - Answer **no** when asked if the project will manage its own state containers.
+   - Supply information about environments and Azure subscriptions as requested.
+3. From the root of the project run `step_2_bootstrap.sh`
+   - The script will generate README files and create `backend.tf` files with placeholder values.
+4. From the root of the project run `step_3_remove_init_scripts.sh`
+   - The script will remove all remaining files from the scaffolding and bootstrapping process.
+5. Edit the `backend.tf` file in each environment directory to point to the correct pre-provisioned state container.
+   - Update this README with relevant information, tip: search for TODO.
+
 ## Resulting project structure
+
+### Self-contained mode
 
 Example of resulting project structure (scaffolded for environments `env1` and `env2`):
 
@@ -87,9 +110,42 @@ Example of resulting project structure (scaffolded for environments `env1` and `
     └── README.md
 ```
 
+### External mode
+
+Example of resulting project structure (scaffolded for environments `env1` and `env2`):
+
+```text
+.
+├── README.md
+├── envs
+│   ├── README.md
+│   ├── env1
+│   │   ├── .az-subscription
+│   │   ├── README.md
+│   │   ├── backend.tf          <-- Edit to point to pre-provisioned state container
+│   │   ├── main.tf
+│   │   ├── outputs.tf
+│   │   ├── providers.tf
+│   │   ├── variables.tf
+│   │   └── versions.tf
+│   └── env2
+│       ├── .az-subscription
+│       ├── ...
+├── main
+│   ├── README.md
+│   ├── main.tf
+│   ├── outputs.tf
+│   ├── providers.tf
+│   └── variables.tf
+└── modules
+    └── README.md
+```
+
 ## Maintainer documentation
 
 Some of the scripts supports a "test mode". Here is how to dry run the project:
+
+### Self-contained mode (debug)
 
 ```bash
 #!/usr/bin/env bash
@@ -103,8 +159,41 @@ cp -r . $temp_dir
 # change to the temporary directory
 pushd $temp_dir
 
-# run step 1
+# run step 1 (self-contained state management)
 $(pwd)/step_1_scaffold.sh debug
+
+# read json
+cat bootstrap.json | jq
+
+# run step 2
+$(pwd)/step_2_bootstrap.sh debug
+
+# open temp project in vscode
+code $temp_dir
+
+# change back to the original directory
+popd
+
+# remove the temporary directory
+rm -rf $temp_dir
+```
+
+### External mode (debug)
+
+```bash
+#!/usr/bin/env bash
+
+# create a temporary directory and store its path in a variable
+temp_dir=$(mktemp -d)
+
+# copy the contents of the current directory to the temporary directory
+cp -r . $temp_dir
+
+# change to the temporary directory
+pushd $temp_dir
+
+# run step 1 (external state management)
+$(pwd)/step_1_scaffold.sh debug-external
 
 # read json
 cat bootstrap.json | jq
