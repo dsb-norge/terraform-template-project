@@ -1,6 +1,6 @@
 {
   "recommendations": [
-    "azapi-vscode.azapi",
+    "ams-azuretools.vscode-azureterraform",
     "davidanson.vscode-markdownlint",
     "eamodio.gitlens",
     "fabiospampinato.vscode-open-in-github",
@@ -10,7 +10,7 @@
     "hashicorp.hcl",
     "hashicorp.terraform",
     "jeff-hykin.code-eol",
-    "ms-vscode.azure-account",
+    "ms-azuretools.vscode-azureresourcegroups",
     "run-at-scale.terraform-doc-snippets",
     "streetsidesoftware.code-spell-checker",
     "streetsidesoftware.code-spell-checker-norwegian-bokmal",
