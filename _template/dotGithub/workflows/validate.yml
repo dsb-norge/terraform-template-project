@@ -8,11 +8,25 @@ on:
     branches:
       - main
     types: [opened, synchronize, reopened]
-  workflow_dispatch: # allows manual build
+  workflow_dispatch: # allows manual build; the standard dispatch inputs, read by name by the workflow
+    inputs:
+      environment:
+        description: "Environment to run, as named in environments-yml. Empty runs every environment."
+        type: string
+        default: ""
+      goal:
+        description: "Goal for this run. default follows goals-yml; plan, apply and destroy-plan override it for the selected environments."
+        type: choice
+        options: [default, plan, apply, destroy-plan]
+        default: default
+      reason:
+        description: "Why this run is dispatched. Recorded in the run summary."
+        type: string
+        default: ""
 
 jobs:
   tf:
-    uses: dsb-norge/github-actions-terraform/.github/workflows/terraform-ci-cd-default.yml@v0
+    uses: dsb-norge/github-actions-terraform/.github/workflows/terraform-ci-cd-default.yml@v1
     secrets: inherit # pass all secrets, ok since we trust our own workflow
     permissions: write-all # allow all, ok since we trust our own workflow
     with:
