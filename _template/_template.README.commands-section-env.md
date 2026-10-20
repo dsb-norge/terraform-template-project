@@ -12,9 +12,12 @@ terraform init -reconfigure
 terraform fmt -check -recursive
 terraform validate
 
-# lint with TFLint, calling script from https://github.com/dsb-norge/terraform-tflint-wrappers
-alias lint='curl -s https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_linux.sh | bash -s --'
-lint
+# lint with TFLint through the dsb CLI, which runs from the repository root
+# load tf-helpers, make sure to be authenticated with GitHub cli in advance
+pushd ../.. >/dev/null
+source <(gh api -H "Accept: application/vnd.github.v3.raw" /repos/dsb-norge/terraform-helpers/contents/dsb-tf-proj-helpers.sh) ;
+tf-lint [BOOTSTRAP_VALUE_ENV_NAME]
+popd >/dev/null
 
 # plan should pass
 terraform plan
