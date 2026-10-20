@@ -58,5 +58,4 @@ tf-clean-all
 
 # clean up cached files in the terraform state project
 rm -rf envs/_terraform-state/.terraform
-rm -rf envs/_terraform-state/.tflint
 ```

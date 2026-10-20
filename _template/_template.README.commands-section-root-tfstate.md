@@ -14,9 +14,10 @@ terraform -chdir="${envDir}" init -reconfigure -backend-config='backend-config.[
 terraform fmt -check -recursive
 terraform -chdir="${envDir}" validate
 
-# lint with TFLint, calling script from https://github.com/dsb-norge/terraform-tflint-wrappers
-alias lint='curl -s https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_linux.sh | bash -s --'
-pushd "${envDir}" >/dev/null && lint && popd >/dev/null || popd >/dev/null
+# lint with TFLint through the dsb CLI, once per env.*.tfvars file in "${envDir}"
+# load tf-helpers, make sure to be authenticated with GitHub cli in advance
+source <(gh api -H "Accept: application/vnd.github.v3.raw" /repos/dsb-norge/terraform-helpers/contents/dsb-tf-proj-helpers.sh) ;
+tf-lint-tfstate
 
 # plan should pass
 terraform -chdir="${envDir}" plan -var-file='env.[BOOTSTRAP_VALUE_ENV_NAME].tfvars'

@@ -28,7 +28,7 @@
 **/.tflint/*
 
 # Local tflint configuration
-# We use the one we get from https://raw.githubusercontent.com/dsb-norge/terraform-tflint-wrappers/main/tflint_linux.sh
+# The template ships none: in a scaffolded project the dsb CLI writes one into each environment directory
 **/.tflint.hcl
 
 
