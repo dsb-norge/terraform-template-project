@@ -28,6 +28,8 @@ The following tooling must be installed in order for scaffolding and bootstrappi
   - `sudo apt-get update && sudo apt-get install -y jq`
 - Azure CLI - <https://docs.microsoft.com/en-us/cli/azure/install-azure-cli>
 - Terraform - <https://www.terraform.io/downloads>
+- GitHub CLI, authenticated - <https://cli.github.com/manual/installation>
+  - used in the last step to load the dsb CLI, [terraform-helpers](https://github.com/dsb-norge/terraform-helpers)
 
 ## How to
 
@@ -51,6 +53,19 @@ Use this mode when the project should create and manage its own terraform state 
 5. From the root of the project run `step_3_remove_init_scripts.sh`
    - The script will remove all remaining files from the scaffolding and bootstrapping process.
    - Update this README with relevant information, tip: search for TODO.
+6. From the root of the project, supply the TFLint configurations with the dsb CLI:
+
+   ```bash
+   # load tf-helpers, make sure to be authenticated with GitHub cli in advance
+   source <(gh api -H "Accept: application/vnd.github.v3.raw" /repos/dsb-norge/terraform-helpers/contents/dsb-tf-proj-helpers.sh) ;
+
+   # initialize every environment without backend, then lint every environment and envs/_terraform-state
+   tf-init-all-offline
+   tf-lint-all
+   ```
+
+   - The template ships no `.tflint.hcl`. `tf-lint-all` writes the default configuration into each environment directory and into `envs/_terraform-state`, then lints them.
+   - Commit the `.tflint.hcl` files it wrote. Until they are committed, the lint in the project's CI workflow fails.
 
 ### External state management
 
@@ -66,6 +81,19 @@ Use this mode when terraform state containers are pre-provisioned and managed ex
    - The script will remove all remaining files from the scaffolding and bootstrapping process.
 5. Edit the `backend.tf` file in each environment directory to point to the correct pre-provisioned state container.
    - Update this README with relevant information, tip: search for TODO.
+6. From the root of the project, supply the TFLint configurations with the dsb CLI:
+
+   ```bash
+   # load tf-helpers, make sure to be authenticated with GitHub cli in advance
+   source <(gh api -H "Accept: application/vnd.github.v3.raw" /repos/dsb-norge/terraform-helpers/contents/dsb-tf-proj-helpers.sh) ;
+
+   # initialize every environment without backend, then lint every environment
+   tf-init-all-offline
+   tf-lint-all
+   ```
+
+   - The template ships no `.tflint.hcl`. `tf-lint-all` writes the default configuration into each environment directory, then lints them.
+   - Commit the `.tflint.hcl` files it wrote. Until they are committed, the lint in the project's CI workflow fails.
 
 ## Resulting project structure
 
@@ -79,6 +107,7 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 ├── envs
 │   ├── README.md
 │   ├── _terraform-state
+│   │   ├── .tflint.hcl
 │   │   ├── README.md
 │   │   ├── backend-config.env1.hcl
 │   │   ├── backend-config.env2.hcl
@@ -90,6 +119,7 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 │   │   └── variables.tf
 │   ├── env1
 │   │   ├── .az-subscription
+│   │   ├── .tflint.hcl
 │   │   ├── README.md
 │   │   ├── backend.tf
 │   │   ├── main.tf
@@ -121,6 +151,7 @@ Example of resulting project structure (scaffolded for environments `env1` and `
 │   ├── README.md
 │   ├── env1
 │   │   ├── .az-subscription
+│   │   ├── .tflint.hcl
 │   │   ├── README.md
 │   │   ├── backend.tf          <-- Edit to point to pre-provisioned state container
 │   │   ├── main.tf

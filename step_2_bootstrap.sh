@@ -409,11 +409,15 @@ if [ "${MANAGE_STATE_CONTAINERS}" == "true" ]; then
   echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
   echo "bootstrap.sh:   2️⃣  Update project README.md in the root directory with relevant information."
   echo "bootstrap.sh:   3️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
-  echo -e "bootstrap.sh:   4️⃣  Start developing your terraform project 😁\n"
+  echo "bootstrap.sh:   4️⃣  Load the dsb CLI (github.com/dsb-norge/terraform-helpers), run 'tf-init-all-offline' then 'tf-lint-all',"
+  echo "bootstrap.sh:       and commit the .tflint.hcl files it writes into each environment and envs/_terraform-state."
+  echo -e "bootstrap.sh:   5️⃣  Start developing your terraform project 😁\n"
 else
   echo "bootstrap.sh:   1️⃣  Run step_3_remove_init_scripts.sh to remove files remaining from the process."
   echo "bootstrap.sh:   2️⃣  Edit backend.tf in each environment directory to point to the pre-provisioned state container."
   echo "bootstrap.sh:   3️⃣  Update project README.md in the root directory with relevant information."
   echo "bootstrap.sh:   4️⃣  Update urls at the bottom of the file .github/workflows/validate.yml"
-  echo -e "bootstrap.sh:   5️⃣  Start developing your terraform project 😁\n"
+  echo "bootstrap.sh:   5️⃣  Load the dsb CLI (github.com/dsb-norge/terraform-helpers), run 'tf-init-all-offline' then 'tf-lint-all',"
+  echo "bootstrap.sh:       and commit the .tflint.hcl files it writes into each environment."
+  echo -e "bootstrap.sh:   6️⃣  Start developing your terraform project 😁\n"
 fi
