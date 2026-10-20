@@ -35,9 +35,6 @@ jobs:
       # all init commands should be performed without backend
       extra-envs-yml: |
         TF_CLI_ARGS_init: "-backend=false"
-      # required by tflint
-      terraform-init-additional-dirs-yml: |
-        - "./main"
       # only validate + lint, project must be applied manually
       goals-yml: |
         - init
